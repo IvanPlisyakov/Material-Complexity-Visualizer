@@ -172,8 +172,8 @@ Default absolute budgets:
 
 ## Next Steps
 
-- **[Usage Guide](Documentation/Usage.md)** — deep dive into all features, settings, and workflows
-- **[Troubleshooting](Documentation/Troubleshooting.md)** — solutions for common issues
+- **[Usage Guide](Usage.md)** — deep dive into all features, settings, and workflows
+- **[Troubleshooting](Troubleshooting.md)** — solutions for common issues
 
 ---
 
