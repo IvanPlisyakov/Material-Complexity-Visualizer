@@ -1,0 +1,365 @@
+# Troubleshooting
+
+Solutions for common issues with Material Complexity Visualizer.
+
+---
+
+## Table of Contents
+
+- [Installation Issues](#installation-issues)
+- [Wires Not Colored](#wires-not-colored)
+- [Colors Look Wrong](#colors-look-wrong)
+- [Tooltip Issues](#tooltip-issues)
+- [Legend Issues](#legend-issues)
+- [Performance Issues](#performance-issues)
+- [Material Function Issues](#material-function-issues)
+- [Settings Issues](#settings-issues)
+- [Build / Compilation Issues](#build--compilation-issues)
+- [UE Version Compatibility](#ue-version-compatibility)
+- [Debug Tools](#debug-tools)
+
+---
+
+## Installation Issues
+
+### Plugin not visible in Edit → Plugins
+
+**Symptoms:** The plugin doesn't appear in the Plugins window.
+
+**Solutions:**
+1. Verify the folder structure is correct:
+   ```
+   YourProject/Plugins/MaterialComplexityVisualizer/MaterialComplexityVisualizer.uplugin
+   ```
+2. Make sure the `.uplugin` file exists at the root of the plugin folder
+3. Restart the editor completely
+
+### MCV button not appearing in Material Editor toolbar
+
+**Symptoms:** Plugin is enabled but no MCV button in the Material Editor.
+
+**Solutions:**
+1. Close and reopen the Material Editor
+2. Check if the plugin is enabled: **Edit → Plugins → Material Complexity Visualizer**
+3. Restart the editor after enabling
+4. If using source build: verify all three modules compiled without errors (MaterialComplexityCore, MaterialComplexityEditor, MaterialComplexityBatch)
+
+---
+
+## Wires Not Colored
+
+### All wires are white
+
+**Symptoms:** The visualizer is active but all wires appear white.
+
+**Possible causes and solutions:**
+
+1. **Low cost material.** If every wire has very low cost, they all appear white. Switch to **Absolute** normalization to use a fixed scale.
+
+2. **Wrong mode for the material.** A material with no texture samples will show all-white in Samples mode. Switch to a mode that matches the material's content.
+
+3. **Normalization mismatch.** In **P95** or **Max** normalization, if one wire is vastly more expensive than all others, the rest appear white by comparison. Try **Absolute** normalization.
+
+### Wires are colored but don't change when switching modes
+
+**Symptoms:** Switching from Total to ALU shows the same colors.
+
+**Solutions:**
+1. Make sure you are clicking the mode option in the dropdown (the radio button should change)
+2. Close and reopen the Material Editor tab
+3. Check the Legend — it should update to show the new mode name, scale, and Hotspots
+
+### Wire with highest cost is not red
+
+**Symptoms:** A wire has the maximum cost in the material but appears white or light colored.
+
+**Solutions:**
+
+1. **Check normalization mode.** In Absolute mode, if the budget is much higher than the actual costs, nothing will reach red. Lower the Absolute Scale budget in settings.
+
+2. **Mode not matching.** Ensure the mode matches what you're looking at. A wire expensive in ALU mode may be cheap in Samples mode.
+
+3. **P95 outlier.** In P95 mode, values above the 95th percentile are clamped to red. If your expensive wire *is* the 95th percentile, it should be red. Verify by hovering to see the actual cost in the tooltip.
+
+---
+
+## Colors Look Wrong
+
+### Colors don't match the Legend gradient
+
+**Symptoms:** A wire with cost at 50% of the scale doesn't appear to be the Legend's midpoint color.
+
+**Explanation:** Wire colors use linear interpolation between the 5 gradient stops. The Legend renders the gradient as 18 discrete segments. Small visual differences between continuous (wires) and discrete (Legend) are expected.
+
+### Gradient appears as a single solid color
+
+**Symptoms:** The Legend or tooltip gradient bar shows one flat color.
+
+**Solutions:**
+1. Check that gradient colors aren't all set to the same value in settings
+2. Reset gradient preset: set **Gradient Preset** to **Neon** or **Base**
+3. Verify in **Editor Preferences → Plugins → Material Complexity Visualizer → Gradient** that all 5 colors are different
+
+### Colors are too dark or invisible
+
+**Symptoms:** Wire colors are barely visible against the graph background.
+
+**Solutions:**
+1. The default Neon gradient is designed for dark Material Editor backgrounds
+2. If using a custom gradient, ensure Color at 0% is bright (white recommended)
+3. Increase gradient saturation for intermediate stops
+
+---
+
+## Tooltip Issues
+
+### Tooltip not appearing on hover
+
+**Symptoms:** Hovering over wires doesn't show the cost tooltip.
+
+**Solutions:**
+1. Make sure MCV is active (MCV button in toolbar should be highlighted)
+2. Hover directly over the wire, not near it — the hit detection requires the cursor to be on the wire spline
+3. Hold the hover position steady for a moment — the tooltip has a brief appear delay (standard Slate tooltip behavior)
+4. Try hovering over a different wire to verify
+
+### Tooltip shows "0" for all metrics
+
+**Symptoms:** Tooltip appears but all metric values are zero.
+
+**Solutions:**
+1. The wire might genuinely have zero cost (e.g., a direct connection from a constant to an output with no operations)
+2. If all wires show zero, the cost calculator may not have processed the material yet — close and reopen the Material Editor tab
+
+### Tooltip tick values don't match Legend
+
+**Symptoms:** The tick labels under the tooltip gradient show different numbers than the Legend.
+
+**Explanation:** Both the tooltip and Legend use the same ScaleMax value and the same formatting logic. If you see a discrepancy:
+1. The tooltip may have been created before a mode/normalization change — move the cursor off and back onto the wire
+2. Switch modes and switch back to force a refresh
+
+---
+
+## Legend Issues
+
+### Legend not visible
+
+**Symptoms:** Pressed Ctrl+L but Legend doesn't appear.
+
+**Solutions:**
+1. The Legend appears in the **top-right corner** of the graph panel — it may be off-screen if the graph is scrolled
+2. Make sure the Material Editor window is focused (not the Content Browser or Details panel)
+3. Try toggling via the MCV dropdown → Legend → Show Legend
+4. Check that MCV is active
+
+### Legend shows wrong scale values
+
+**Symptoms:** Legend tick labels don't match expected costs.
+
+**Explanation:** This is usually correct behavior:
+- In **P95** mode: the scale maximum is the 95th percentile of all wire costs, which changes per material
+- In **Max** mode: the scale maximum is the single highest wire cost
+- In **Absolute** mode: the scale is the fixed budget from settings
+
+If values seem wrong, hover over wires to see individual costs and verify they match the gradient position.
+
+### Legend position overlaps other UI
+
+**Symptoms:** Legend panel covers important parts of the graph.
+
+**Current behavior:** The Legend is fixed to the top-right corner with a 16px edge margin. It cannot be dragged or repositioned. If it obscures your work, toggle it off with Ctrl+L and use the tooltip for individual wire analysis.
+
+### Hotspots list is empty
+
+**Symptoms:** Legend's Hotspots section shows but with no entries.
+
+**Possible causes:**
+1. The material has very few nodes — Hotspots shows the Top N, where N depends on material size
+2. All nodes have zero incremental cost
+3. The current mode may not have cost data (e.g., Samples mode on a material with no textures)
+
+### Clicking a Hotspot doesn't navigate to the node
+
+**Symptoms:** Clicking a row in the Hotspots list doesn't pan the graph.
+
+**Solutions:**
+1. The node may already be visible in the current view
+2. The node may be inside a Material Function (navigation focuses the outer function call node)
+3. Try zooming out first, then clicking the Hotspot row
+
+### Hotspot values seem wrong
+
+**Symptoms:** A node you expect to be expensive doesn't appear in Hotspots.
+
+**Explanation:** Hotspots uses **incremental scoring**, not cumulative cost. A node with high cumulative cost but low *added* cost (because its inputs are already expensive) will rank lower than a node that dramatically increases cost from its inputs.
+
+For example:
+- An `Add` node with two expensive inputs (cost 50 each) that outputs cost 51 has a delta of only 1
+- A `Power` node with a cheap input (cost 5) that outputs cost 25 has a delta of 20
+- The Power node ranks higher despite lower total cost
+
+---
+
+## Performance Issues
+
+### Material Editor feels sluggish with MCV active
+
+**Solutions:**
+1. **Hide labels**: Disable **Show Labels** in the MCV dropdown — label rendering on many wires can reduce performance
+2. **Hide Legend**: Toggle off the Legend overlay (Ctrl+L) when not needed
+3. **Close other Material Editors**: Each open Material Editor tab runs its own analysis
+
+### Wire labels cause frame drops when zoomed in
+
+**Solutions:**
+1. Reduce **Wire Label Font Size** in settings (smaller fonts render faster)
+2. Wire labels auto-hide when zoomed out — zooming out should improve performance
+3. Disable labels entirely if not needed
+
+---
+
+## Material Function Issues
+
+### Material Function wires are not colored
+
+**Symptoms:** When editing a Material Function directly, wires don't show cost colors.
+
+**Explanation:** MCV works within the context of a Material. When editing a standalone Material Function, there is no parent material to provide context for normalization. Open a Material that *uses* this function to see the costs in context.
+
+### Function call node shows unexpected high cost
+
+**Symptoms:** A MaterialFunctionCall node shows very high cost relative to surrounding nodes.
+
+**Explanation:** This is expected — the function call's cost equals the **total internal cost** of all nodes inside the function. A function with 20 internal nodes will naturally have higher cost than a single-node expression.
+
+To investigate, double-click the function call to open the function body and analyze internal costs there.
+
+---
+
+## Settings Issues
+
+### Settings don't persist between sessions
+
+**Symptoms:** Changed settings revert when restarting the editor.
+
+**Solutions:**
+1. Settings are saved to `EditorPerProjectUserSettings` config
+2. Make sure you're modifying settings through **Editor Preferences** (not DefaultEditor.ini directly)
+3. Verify the project's `Saved/Config/` directory is writable
+
+### Can't find settings in Editor Preferences
+
+**Path:** Edit → Editor Preferences → Plugins → Material Complexity Visualizer
+
+If the section doesn't appear:
+1. Confirm the plugin is enabled
+2. Search for "Material Complexity" in the Editor Preferences search bar
+3. Restart the editor
+
+### Gradient doesn't reset to preset colors
+
+**Symptoms:** Selecting "Neon" or "Base" preset doesn't change the colors.
+
+**Solutions:**
+1. Change the preset dropdown to a different value, then back to the desired preset
+2. Close and reopen Editor Preferences
+3. If colors are locked to Custom, manually set each color stop to match the preset values
+
+---
+
+## Build / Compilation Issues
+
+### Module not found: MaterialComplexityCore
+
+**Symptoms:** Build error referencing MaterialComplexityCore.
+
+**Solutions:**
+1. Verify `MaterialComplexityVisualizer.uplugin` lists all three modules
+2. Check that `Source/MaterialComplexityCore/` directory and its `Build.cs` file exist
+3. Regenerate project files
+
+### Linking errors with MaterialComplexityCore
+
+**Symptoms:** Unresolved external symbols from MaterialComplexityCore.
+
+**Solutions:**
+1. Add `MaterialComplexityCore` to `PublicDependencyModuleNames` in `MaterialComplexityEditor.Build.cs`
+2. Make sure exported classes use the `MATERIALCOMPLEXITYCORE_API` macro
+3. Clean and rebuild (delete `Intermediate/` and `Binaries/` folders)
+
+### Hot Reload fails
+
+**Symptoms:** Changes don't apply after live coding / hot reload.
+
+**Solutions:**
+1. Close all Material Editor windows before recompiling
+2. Use full editor restart instead of hot reload for structural changes
+3. If Live Coding fails repeatedly, disable it in **Editor Preferences → Live Coding** and use manual build
+
+---
+
+## UE Version Compatibility
+
+### UE 5.0 / 5.1 specific issues
+
+| Error | Solution |
+|-------|----------|
+| `MaterialDomain.h` not found | Expected — the plugin uses version-conditional includes |
+| `FMaterialAttributeDefinitionMap` not found | Expected — plugin has built-in fallback for UE 5.0/5.1 |
+| `ToPaintGeometry(FVector2f)` compile error | Plugin handles this via `MCV_VECTOR2_PAINT` macro |
+| `RefractionMethod` / `RM_None` not found | Plugin wraps this in version check |
+
+These are all handled automatically by the version compatibility layer. If you see these errors, ensure you're building the correct plugin version for your engine.
+
+### UE 5.3+ specific issues
+
+| Error | Solution |
+|-------|----------|
+| `.generated.h` errors | Ensure engine shaders and headers are fully installed |
+| API deprecation warnings | Non-blocking warnings — safe to ignore |
+
+---
+
+## Debug Tools
+
+### UE Console Commands
+
+| Command | Purpose |
+|---------|---------|
+| `Slate.ShowDebugView 1` | Visualize widget boundaries (useful for Legend debugging) |
+| `Slate.ShowInvalidationCaching 1` | Show which regions are being repainted |
+| `mcv.Dependent.Debug 1` | Enable UV dependency chain debugging |
+
+### Log Output
+
+MCV logs appear with the `[MCV]` prefix:
+
+```
+Output Log → filter by "MCV"
+```
+
+Log file location:
+```
+YourProject/Saved/Logs/YourProject.log
+```
+
+### Widget Reflector
+
+Use the **Widget Reflector** (Window → Developer Tools → Widget Reflector) to inspect Legend and Tooltip Slate widgets. Look for widgets named:
+- `SMaterialComplexityLegend`
+- `SMaterialComplexityHoverToolTip`
+
+---
+
+## Still Having Issues?
+
+If your problem isn't listed here:
+
+1. Check the [GitHub Issues](../../issues) for known bugs and workarounds
+2. Open a new issue with:
+   - Unreal Engine version
+   - Plugin version
+   - Steps to reproduce the problem
+   - Material Editor screenshot (if applicable)
+   - Relevant log output from `Saved/Logs/`
