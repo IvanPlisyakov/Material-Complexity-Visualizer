@@ -50,12 +50,14 @@ Open any Material or Material Function in the **Material Editor**. You'll notice
 
 ### Step 2 — Activate the Visualizer
 
-Click the **MCV** button in the toolbar. A dropdown menu appears with two sections:
+Click the **MCV** button in the toolbar. A dropdown menu appears with these sections:
 
 - **Mode** — what aspect of shader cost to visualize
 - **Normalization** — how cost values map to colors
+- **Wires** — toggle wire coloring and cost labels on/off
+- **Legend** — toggle the floating Legend panel
 
-The default settings (**Total** mode + **P95** normalization) are a great starting point.
+The default settings (**Total** mode + **P95** normalization, Wires enabled) are a great starting point.
 
 ### Step 3 — Read the Wires
 
@@ -153,11 +155,11 @@ Default absolute budgets:
 
 | Mode | Budget |
 |:---:|:---:|
-| Total | 400 |
-| ALU | 200 |
-| Samples | 16 |
-| Flow | 50 |
-| Dependent | 20 |
+| Total | 300 |
+| ALU | 250 |
+| Samples | 64 |
+| Flow | 80 |
+| Dependent | 64 |
 | Feature Penalty | 100 |
 
 ---
@@ -167,6 +169,24 @@ Default absolute budgets:
 | Shortcut | Action |
 |----------|--------|
 | **Ctrl+L** | Toggle Legend |
+
+---
+
+## Default State Settings
+
+All initial values when opening a new Material Editor tab are controlled in:
+
+**Editor Preferences → Plugins → Material Complexity Visualizer → Default State**
+
+| Setting | Description |
+|---------|-------------|
+| View Mode | Which mode the visualizer starts in for new tabs |
+| Normalization Mode | Which normalization mode new tabs start with |
+| Wires Enabled by Default | Whether wire coloring is on when you open a material |
+| Legend Visible by Default | Whether the Legend panel is open by default |
+| Default Hotspots Top N | How many nodes the Hotspots list shows (5/10/20/50) |
+
+> **Note:** These settings apply only when a **new** Material Editor tab is opened. Changing them does not affect already-open tabs.
 
 ---
 
@@ -184,7 +204,7 @@ All plugin settings are in:
 **Editor Preferences → Plugins → Material Complexity Visualizer**
 
 Here you can change:
-- View mode and normalization defaults
+- Default view mode and normalization (per new tab)
 - Wire label font size and shadow
 - Gradient colors and presets
 - Metric weights for Total mode
