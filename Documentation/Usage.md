@@ -10,9 +10,11 @@ Complete reference for all Material Complexity Visualizer features, settings, an
 - [Analysis Modes](#analysis-modes)
 - [Normalization Modes](#normalization-modes)
 - [Heatmap Wires](#heatmap-wires)
+- [Wires Toggle](#wires-toggle)
 - [Cost Labels](#cost-labels)
 - [Tooltip](#tooltip)
 - [Legend](#legend)
+- [Hotspots](#hotspots)
 - [Material Function Support](#material-function-support)
 - [Settings Reference](#settings-reference)
 - [Gradient Customization](#gradient-customization)
@@ -29,12 +31,13 @@ Clicking the button opens a dropdown menu with the following sections:
 
 | Section | Purpose |
 |---------|---------|
-| **Mode** | Select which cost metric to visualize |
-| **Normalization** | Choose how raw values map to the color gradient |
-| **Legend** | Toggle the Legend (includes color scale and Hotspots) |
+| **Mode** | Select which cost metric to visualize (per-tab) |
+| **Normalization** | Choose how raw values map to the color gradient (per-tab) |
+| **Wires** | Toggle wire coloring and cost labels on/off for this tab |
+| **Legend** | Toggle the Legend panel (includes color scale and Hotspots) |
 | **Shortcuts** | Quick reference for keyboard shortcuts |
 
-Each mode and normalization option includes a brief description to help you choose the right one.
+Mode and Normalization are **per-tab** — changing them in one Material Editor window does not affect other open windows.
 
 ---
 
@@ -139,6 +142,8 @@ Total = ALU × W_alu + Samples × W_samp + Dependent × W_dep + Flow × W_flow +
 
 Normalization defines how raw cost values are mapped to the 0%–100% color gradient range.
 
+Normalization is **per-tab** — each Material Editor window remembers its own normalization setting.
+
 ### Percentile 95 (P95)
 
 The scale maximum is set to the 95th percentile of all wire costs in the current material.
@@ -168,11 +173,11 @@ The scale maximum is a fixed budget per mode, defined in plugin settings.
 
 | Mode | Budget | Typical range |
 |------|:---:|:---:|
-| Total | 400 | 0–800+ |
-| ALU | 200 | 0–400+ |
-| Samples | 16 | 0–64+ |
-| Flow | 50 | 0–200+ |
-| Dependent | 20 | 0–64+ |
+| Total | 300 | 0–800+ |
+| ALU | 250 | 0–400+ |
+| Samples | 64 | 0–64+ |
+| Flow | 80 | 0–200+ |
+| Dependent | 64 | 0–64+ |
 | Feature Penalty | 100 | 0–200+ |
 
 All budgets are configurable in **Editor Preferences → Plugins → Material Complexity Visualizer → Advanced → Absolute Scale**.
@@ -181,7 +186,7 @@ All budgets are configurable in **Editor Preferences → Plugins → Material Co
 
 ## Heatmap Wires
 
-When MCV is active, every wire in the material graph is colored based on the current mode and normalization.
+When MCV is active and Wires are enabled, every wire in the material graph is colored based on the current mode and normalization.
 
 ### Color Gradient
 
@@ -211,9 +216,28 @@ Switch presets in **Editor Preferences → Plugins → Material Complexity Visua
 
 ---
 
+## Wires Toggle
+
+The **Wires** section in the MCV dropdown provides a per-tab switch to disable wire coloring entirely.
+
+### When to Use
+
+- You want to inspect the graph layout without color distractions
+- You only need the Legend and Hotspots, not individual wire costs
+- Performance testing: verify that MCV has minimal overhead
+
+### Behavior
+
+- When **Wires OFF**: all wires revert to their default Unreal Engine colors; cost labels are hidden
+- When **Wires ON**: full heatmap coloring and labels are applied
+- The toggle is **per-tab** — disabling wires in one Material Editor does not affect others
+- The **default state** for new tabs is controlled by **Editor Preferences → Default State → Wires Enabled by Default**
+
+---
+
 ## Cost Labels
 
-When **Show Labels** is enabled, numeric cost values are printed directly on each wire.
+When **Show Labels** is enabled (in the Wires section of the dropdown), numeric cost values are printed directly on each wire.
 
 ### Behavior
 
@@ -226,7 +250,7 @@ When **Show Labels** is enabled, numeric cost values are printed directly on eac
 
 | Setting | Default | Range | Path |
 |---------|:---:|:---:|------|
-| Show Labels | On | On/Off | Material Complexity → Show Labels |
+| Show Labels | On | On/Off | MCV dropdown → Wires → Show Labels |
 | Font Size | 9 | 6–24 | Material Complexity → Wire Labels → Wire Label Font Size |
 | Shadow Opacity | 0.7 | 0.0–1.0 | Material Complexity → Wire Labels → Wire Label Shadow Opacity |
 
@@ -272,7 +296,7 @@ The tooltip uses short names for common node types:
 | Fresnel | Fresnel | DotProduct | Dot |
 | Normalize | Normalize | CrossProduct | Cross |
 
-Material Function calls display their function name.
+Material Function calls display their function name. Function Output nodes display their `OutputName` (e.g., "Result", "Color", "Normal").
 
 ---
 
@@ -284,6 +308,7 @@ The Legend is a floating panel in the top-right corner of the Material Editor gr
 
 - **Ctrl+L** keyboard shortcut
 - **MCV dropdown → Legend → Show Legend** checkbox
+- Default state: **Editor Preferences → Default State → Legend Visible by Default**
 
 ### Color Scale
 
@@ -316,11 +341,15 @@ Tick labels update automatically when the scale changes:
 0    4    8    12    16+
 ```
 
-### Hotspots
+---
 
-Below the color scale, the Legend displays a ranked list of the **Top N most expensive nodes**, sorted by incremental contribution.
+## Hotspots
 
-**Scoring:** Hotspots ranks nodes by **how much cost each node adds**, not by total cumulative cost. This ensures that simple aggregator nodes (Add, Lerp) don't dominate the list just because they collect many input branches.
+The Hotspots section appears below the color scale in the Legend. It shows a ranked list of the **Top N most expensive nodes**, sorted by incremental contribution.
+
+### Scoring
+
+Hotspots ranks nodes by **how much cost each node adds**, not by total cumulative cost. This ensures that simple aggregator nodes (Add, Lerp) don't dominate the list just because they collect many input branches.
 
 **Incremental score formula:**
 
@@ -335,9 +364,19 @@ score       = delta × ln(output_cost / Cin)
 - **score** is used for sorting (balances absolute and relative contribution)
 - Both output and input costs use the current mode and weights
 
-**Navigation:** Click any row in the Hotspots list to **pan the graph** to that node and select it. This works across the full graph, including nodes that are currently off-screen.
+### Navigation
 
-**Mode Awareness:** The Hotspots list updates when you switch modes. In ALU mode, it shows the top ALU contributors; in Samples mode, the top texture sampling nodes; and so on.
+Click any row in the Hotspots list to **pan the graph** to that node and select it. This works across the full graph, including nodes that are currently off-screen.
+
+### Mode Awareness
+
+The Hotspots list updates when you switch modes. In ALU mode, it shows the top ALU contributors; in Samples mode, the top texture sampling nodes; and so on.
+
+### Top N Setting
+
+The number of nodes shown is configurable:
+- **Dropdown** (per-tab): MCV button shows current count; cycle through 5/10/20/50 with the combobox
+- **Default**: **Editor Preferences → Default State → Default Hotspots Top N**
 
 ---
 
@@ -370,22 +409,27 @@ When a `MaterialFunctionCall` node is encountered:
 
 All settings are located at: **Editor Preferences → Plugins → Material Complexity Visualizer**
 
-### General Settings
+### Default State
+
+These values apply only when a **new** Material Editor tab is opened. Changing them does not affect already-open tabs.
 
 | Setting | Type | Default | Description |
 |---------|------|:---:|-------------|
-| View Mode | Enum | Total | Active analysis mode |
-| Normalization Mode | Enum | Percentile95 | Scale mapping strategy |
-| Show Labels | Bool | true | Display cost numbers on wires |
+| View Mode | Enum | Total | Analysis mode for new tabs |
+| Normalization Mode | Enum | Percentile95 | Normalization for new tabs |
+| Wires Enabled by Default | Bool | true | Whether wire coloring starts enabled |
+| Legend Visible by Default | Bool | true | Whether Legend panel starts visible |
+| Default Hotspots Top N | Enum | 10 | Hotspots count: 5, 10, 20, or 50 |
 
 ### Wire Labels
 
 | Setting | Type | Default | Range | Description |
 |---------|------|:---:|:---:|-------------|
+| Show Labels | Bool | true | On/Off | Display cost numbers on wires |
 | Wire Label Font Size | int | 9 | 6–24 | Font size in points |
 | Wire Label Shadow Opacity | float | 0.7 | 0.0–1.0 | Shadow behind labels for readability |
 
-### Weights (Total Mode)
+### Advanced — Weights (Total Mode)
 
 | Setting | Type | Default | Min | Description |
 |---------|------|:---:|:---:|-------------|
@@ -395,15 +439,15 @@ All settings are located at: **Editor Preferences → Plugins → Material Compl
 | Flow Weight | int | 10 | 1 | How much Flow contributes to Total |
 | Feature Penalty Weight | int | 1 | 0 | How much Feature Penalty contributes to Total |
 
-### Absolute Scale Budgets
+### Advanced — Absolute Scale Budgets
 
 | Setting | Type | Default | Range | Description |
 |---------|------|:---:|:---:|-------------|
-| Total Scale | float | 400 | 1–5000 | Budget for Total mode |
-| ALU Scale | float | 200 | 1–5000 | Budget for ALU mode |
-| Samples Scale | float | 16 | 1–512 | Budget for Samples mode |
-| Flow Scale | float | 50 | 1–2000 | Budget for Flow mode |
-| Dependent Scale | float | 20 | 1–512 | Budget for Dependent mode |
+| Total Scale | float | 300 | 1–5000 | Budget for Total mode |
+| ALU Scale | float | 250 | 1–5000 | Budget for ALU mode |
+| Samples Scale | float | 64 | 1–512 | Budget for Samples mode |
+| Flow Scale | float | 80 | 1–2000 | Budget for Flow mode |
+| Dependent Scale | float | 64 | 1–512 | Budget for Dependent mode |
 | Feature Penalty Scale | float | 100 | 1–1000 | Budget for Feature Penalty mode |
 
 ### Gradient
@@ -516,10 +560,16 @@ All settings are located at: **Editor Preferences → Plugins → Material Compl
 - Cost values are **cached per (Expression, OutputIndex)** pair
 - Cache invalidation occurs automatically on mode/normalization change or graph edit
 - Wire labels auto-hide at far zoom levels (text LOD)
-- Legend updates at most 10 times per second (throttled)
+- Legend and Hotspots update at most 10 times per second (throttled)
 
 ### Memory
 
 - No persistent memory allocation beyond cached analysis results
 - Cache is cleared when closing a Material Editor tab
 - Legend overlay is destroyed on tab close
+
+### Wires Toggle for Performance
+
+If the Material Editor feels sluggish with MCV active on a complex material:
+1. Use the **Wires** toggle in the MCV dropdown to disable wire coloring
+2. Keep the Legend and Hotspots for overview without per-wire overhead
