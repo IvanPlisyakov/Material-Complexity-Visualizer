@@ -16,10 +16,13 @@ MCV colors every wire in your material graph with a heatmap gradient (white → 
 - **Cost Labels** — numeric values displayed directly on wires
 - **6 Analysis Modes** — Total, ALU, Samples, Dependent, Flow, Feature Penalty
 - **3 Normalization Modes** — Percentile 95, Global Max, Absolute (fixed budgets)
+- **Display Toggle** — per-tab Wires and Legend on/off switches in the dropdown
 - **Interactive Tooltip** — hover any wire for a full cost breakdown
 - **Legend with Hotspots** — color scale + ranked expensive nodes with click-to-navigate
+- **Configurable Top N** — show Top 5, 10, 20, or 50 hotspots; cycle with one click
 - **Material Function Support** — full inline traversal with correct cost propagation
 - **Customizable** — gradient colors, metric weights, absolute budgets, label styling
+- **Editor Preferences Defaults** — configure the initial state for each new tab
 - **Non-Destructive** — never modifies your materials; editor-only, zero runtime overhead
 
 ---
@@ -31,6 +34,8 @@ MCV colors every wire in your material graph with a heatmap gradient (white → 
 | 5.0 – 5.7 | ✅ Supported |
 
 **Platform:** Windows 64-bit (Editor only)
+
+> ⚠️ **Substrate Materials:** MCV runs with Substrate enabled but results are not reliable. When working on Substrate materials, hide the visualization instead of disabling the plugin: open the MCV dropdown and set **Wires = off** and **Show Legend = off**. Re-enable instantly when switching back to standard materials.
 
 ---
 
@@ -81,11 +86,11 @@ Default absolute budgets:
 
 | Mode | Budget |
 |:---:|:---:|
-| Total | 400 |
-| ALU | 200 |
-| Samples | 16 |
-| Flow | 50 |
-| Dependent | 20 |
+| Total | 300 |
+| ALU | 250 |
+| Samples | 64 |
+| Flow | 80 |
+| Dependent | 64 |
 | Feature Penalty | 100 |
 
 ---
@@ -102,17 +107,19 @@ Default absolute budgets:
 
 All settings are in **Editor Preferences → Plugins → Material Complexity Visualizer**:
 
-- View mode and normalization defaults
+- **Default State** — initial View Mode, Normalization, Wires, Legend visibility, and Hotspots Top N for each new tab
 - Wire label font size and shadow
 - Gradient colors and presets (Neon, Base, Custom)
 - Metric weights for Total mode
 - Absolute scale budgets
 
+> **Note:** Default State settings apply only when a new Material Editor tab is opened. Already-open tabs keep their per-tab state independently.
+
 ---
 
 ## Support
 
-- **Documentation:** See [Getting Started](GettingStarted.md), [Usage](Usage.md), [Troubleshooting](Troubleshooting.md)
+- **Documentation:** See [Getting Started](Documentation/GettingStarted.md), [Usage](Documentation/Usage.md), [Troubleshooting](Documentation/Troubleshooting.md)
 
 ---
 
