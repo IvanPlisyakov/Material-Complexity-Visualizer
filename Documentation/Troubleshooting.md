@@ -11,6 +11,7 @@ Solutions for common issues with Material Complexity Visualizer.
 - [Colors Look Wrong](#colors-look-wrong)
 - [Tooltip Issues](#tooltip-issues)
 - [Legend Issues](#legend-issues)
+- [Hotspots Issues](#hotspots-issues)
 - [Performance Issues](#performance-issues)
 - [Material Function Issues](#material-function-issues)
 - [Settings Issues](#settings-issues)
@@ -54,11 +55,13 @@ Solutions for common issues with Material Complexity Visualizer.
 
 **Possible causes and solutions:**
 
-1. **Low cost material.** If every wire has very low cost, they all appear white. Switch to **Absolute** normalization to use a fixed scale.
+1. **Wires toggle is off.** Check the MCV dropdown → Wires section. If Wires are disabled, coloring won't apply. Enable the toggle.
 
-2. **Wrong mode for the material.** A material with no texture samples will show all-white in Samples mode. Switch to a mode that matches the material's content.
+2. **Low cost material.** If every wire has very low cost, they all appear white. Switch to **Absolute** normalization to use a fixed scale.
 
-3. **Normalization mismatch.** In **P95** or **Max** normalization, if one wire is vastly more expensive than all others, the rest appear white by comparison. Try **Absolute** normalization.
+3. **Wrong mode for the material.** A material with no texture samples will show all-white in Samples mode. Switch to a mode that matches the material's content.
+
+4. **Normalization mismatch.** In **P95** or **Max** normalization, if one wire is vastly more expensive than all others, the rest appear white by comparison. Try **Absolute** normalization.
 
 ### Wires are colored but don't change when switching modes
 
@@ -119,9 +122,10 @@ Solutions for common issues with Material Complexity Visualizer.
 
 **Solutions:**
 1. Make sure MCV is active (MCV button in toolbar should be highlighted)
-2. Hover directly over the wire, not near it — the hit detection requires the cursor to be on the wire spline
-3. Hold the hover position steady for a moment — the tooltip has a brief appear delay (standard Slate tooltip behavior)
-4. Try hovering over a different wire to verify
+2. Make sure **Wires** are enabled in the MCV dropdown — if Wires are off, tooltips are also disabled
+3. Hover directly over the wire, not near it — the hit detection requires the cursor to be on the wire spline
+4. Hold the hover position steady for a moment — the tooltip has a brief appear delay (standard Slate tooltip behavior)
+5. Try hovering over a different wire to verify
 
 ### Tooltip shows "0" for all metrics
 
@@ -142,6 +146,17 @@ Solutions for common issues with Material Complexity Visualizer.
 ---
 
 ## Legend Issues
+
+### Legend not visible after opening a material
+
+**Symptoms:** Legend doesn't appear when opening a material even though it was visible before.
+
+**Explanation:** This is the expected behavior if **Legend Visible by Default** is set to `false` in Editor Preferences. When you open a new Material Editor tab, the Legend starts hidden.
+
+**Solutions:**
+1. Press **Ctrl+L** to show the Legend manually
+2. Enable via MCV dropdown → Legend → Show Legend
+3. To make the Legend show automatically: **Editor Preferences → Plugins → Material Complexity Visualizer → Default State → Legend Visible by Default** → enable
 
 ### Legend not visible
 
@@ -170,12 +185,16 @@ If values seem wrong, hover over wires to see individual costs and verify they m
 
 **Current behavior:** The Legend is fixed to the top-right corner with a 16px edge margin. It cannot be dragged or repositioned. If it obscures your work, toggle it off with Ctrl+L and use the tooltip for individual wire analysis.
 
+---
+
+## Hotspots Issues
+
 ### Hotspots list is empty
 
 **Symptoms:** Legend's Hotspots section shows but with no entries.
 
 **Possible causes:**
-1. The material has very few nodes — Hotspots shows the Top N, where N depends on material size
+1. The material has very few nodes — Hotspots shows only nodes with positive incremental cost
 2. All nodes have zero incremental cost
 3. The current mode may not have cost data (e.g., Samples mode on a material with no textures)
 
@@ -199,6 +218,12 @@ For example:
 - A `Power` node with a cheap input (cost 5) that outputs cost 25 has a delta of 20
 - The Power node ranks higher despite lower total cost
 
+### Hotspots shows different Top N than expected
+
+**Symptoms:** Hotspots shows 10 nodes but you expect 5 (or vice versa).
+
+**Explanation:** The default Top N for new tabs is set in **Editor Preferences → Default State → Default Hotspots Top N**. Already-open tabs retain their current setting.
+
 ---
 
 ## Performance Issues
@@ -206,16 +231,17 @@ For example:
 ### Material Editor feels sluggish with MCV active
 
 **Solutions:**
-1. **Hide labels**: Disable **Show Labels** in the MCV dropdown — label rendering on many wires can reduce performance
-2. **Hide Legend**: Toggle off the Legend overlay (Ctrl+L) when not needed
-3. **Close other Material Editors**: Each open Material Editor tab runs its own analysis
+1. **Disable wire coloring**: Use the **Wires** toggle in the MCV dropdown — this is the fastest way to reduce MCV overhead while keeping the Legend and Hotspots available
+2. **Hide labels**: Disable **Show Labels** in the MCV dropdown → Wires section
+3. **Hide Legend**: Toggle off the Legend overlay (Ctrl+L) when not needed
+4. **Close other Material Editors**: Each open Material Editor tab runs its own analysis
 
 ### Wire labels cause frame drops when zoomed in
 
 **Solutions:**
 1. Reduce **Wire Label Font Size** in settings (smaller fonts render faster)
 2. Wire labels auto-hide when zoomed out — zooming out should improve performance
-3. Disable labels entirely if not needed
+3. Disable labels entirely: MCV dropdown → Wires → uncheck Show Labels
 
 ---
 
@@ -238,6 +264,14 @@ To investigate, double-click the function call to open the function body and ana
 ---
 
 ## Settings Issues
+
+### Changing View Mode or Normalization in settings has no effect on open tabs
+
+**Symptoms:** Changed **View Mode** or **Normalization Mode** in Editor Preferences but open Material Editor tabs don't update.
+
+**Explanation:** This is the intended behavior. View Mode and Normalization Mode in Editor Preferences are **default state** settings — they apply only when a **new** tab is opened. Already-open tabs keep their own per-tab state.
+
+**Solution:** Change the mode directly in the MCV dropdown for the relevant tab.
 
 ### Settings don't persist between sessions
 
@@ -319,6 +353,14 @@ These are all handled automatically by the version compatibility layer. If you s
 | `.generated.h` errors | Ensure engine shaders and headers are fully installed |
 | API deprecation warnings | Non-blocking warnings — safe to ignore |
 
+### Substrate Materials (not supported)
+
+**Symptoms:** Wires show no cost, all wires white, Hotspots list empty — on a material that looks complex.
+
+**Explanation:** MCV runs with Substrate enabled but results are not reliable — Substrate uses a different node architecture that MCV was not designed for.
+
+**Solution:** Hide the visualization instead of disabling the plugin. Open the MCV dropdown and set **Wires = off** and **Show Legend = off**. MCV stays loaded and you can re-enable it instantly when switching back to standard materials.
+
 ---
 
 ## Debug Tools
@@ -349,17 +391,5 @@ YourProject/Saved/Logs/YourProject.log
 Use the **Widget Reflector** (Window → Developer Tools → Widget Reflector) to inspect Legend and Tooltip Slate widgets. Look for widgets named:
 - `SMaterialComplexityLegend`
 - `SMaterialComplexityHoverToolTip`
+- `SMaterialComplexityHotspotsWidget`
 
----
-
-## Still Having Issues?
-
-If your problem isn't listed here:
-
-1. Check the [GitHub Issues](../../issues) for known bugs and workarounds
-2. Open a new issue with:
-   - Unreal Engine version
-   - Plugin version
-   - Steps to reproduce the problem
-   - Material Editor screenshot (if applicable)
-   - Relevant log output from `Saved/Logs/`
