@@ -8,15 +8,18 @@ Solutions for common issues with Material Complexity Visualizer.
 
 - [Installation Issues](#installation-issues)
 - [Wires Not Colored](#wires-not-colored)
+  - [No wire colors on materials opened at startup](#no-wire-colors-on-materials-opened-at-startup)
 - [Colors Look Wrong](#colors-look-wrong)
 - [Tooltip Issues](#tooltip-issues)
 - [Legend Issues](#legend-issues)
 - [Hotspots Issues](#hotspots-issues)
 - [Performance Issues](#performance-issues)
 - [Material Function Issues](#material-function-issues)
+  - [LandscapeLayerBlend cost drops after Break → Make passthrough](#landscapelayerblend-cost-drops-after-break--make-passthrough)
 - [Settings Issues](#settings-issues)
 - [Build / Compilation Issues](#build--compilation-issues)
 - [UE Version Compatibility](#ue-version-compatibility)
+- [Plugin Compatibility](#plugin-compatibility)
 - [Debug Tools](#debug-tools)
 
 ---
@@ -71,6 +74,23 @@ Solutions for common issues with Material Complexity Visualizer.
 1. Make sure you are clicking the mode option in the dropdown (the radio button should change)
 2. Close and reopen the Material Editor tab
 3. Check the Legend — it should update to show the new mode name, scale, and Hotspots
+
+### No wire colors on materials opened at startup
+
+**Symptoms:** After restarting the editor, materials that were previously open (auto-restored by UE) show white wires, no Legend, and no Hotspots. Switching to the tab or interacting with the graph makes colors appear.
+
+**Root cause:** Two separate bugs combined to cause this:
+
+1. The DrawingPolicy skipped its initial cost calculation for tabs that hadn't been focused yet — triggering calculation only when a tab is active or the user changes a setting.
+2. On UE 5.6+, auto-restored background tabs don't get the MCV node factory injected (only the foreground tab does during startup).
+
+**This is fixed in the current plugin version** (`362aa47` + `b47ff2b`). If you still see it:
+
+1. Wait 1–2 seconds after the editor finishes loading — the background factory injection ticker runs for 10 seconds after startup
+2. Verify you have the latest plugin version installed
+3. If it persists, close and reopen the affected Material Editor tab as a workaround
+
+---
 
 ### Wire with highest cost is not red
 
@@ -261,6 +281,20 @@ For example:
 
 To investigate, double-click the function call to open the function body and analyze internal costs there.
 
+### LandscapeLayerBlend cost drops after Break → Make passthrough
+
+**Symptoms:** A `LandscapeLayerBlend` output wire shows cost X (e.g., 1340). After splitting through `BreakMaterialAttributes` and recombining with `MakeMaterialAttributes`, the output wire shows noticeably lower cost (e.g., 900).
+
+**Explanation:** This is a known limitation of MCV's per-attribute cost model, not a bug.
+
+`LandscapeLayerBlend` blends N material layers using Height and Alpha scalar inputs as blending weights for each layer. These blending weight computations have real GPU cost — but they operate on scalars, not on material attribute channels. MCV tracks cost per material attribute (BaseColor, Normal, Roughness, etc.).
+
+The blending weight overhead cannot be attributed to any single attribute channel — it is shared infrastructure that runs once regardless of how many attributes are reconnected. When `BreakMaterialAttributes` splits the output into per-attribute wires, it passes along only the per-attribute costs. The blending infrastructure overhead is not carried through.
+
+**Is this wrong?** No. The per-attribute cost after `BreakMaterialAttributes` is correct for the attribute pipeline — it accurately represents what each channel costs to produce. The gap represents blending infrastructure shared across all outputs.
+
+**Workaround:** To see the full cost including blending overhead, inspect the wire **before** `BreakMaterialAttributes` in the tooltip. The `LandscapeLayerBlend` output wire cost includes everything.
+
 ---
 
 ## Settings Issues
@@ -363,6 +397,35 @@ These are all handled automatically by the version compatibility layer. If you s
 
 ---
 
+## Plugin Compatibility
+
+### MCV conflicts with other plugins that modify Material Editor wire rendering
+
+**Symptoms:**
+- Wires show no MCV colors even though MCV is active and was working before
+- Wire colors appear for a moment then revert to engine defaults
+- Wires look broken (wrong colors, rendering artifacts) with both plugins active
+- Editor crashes or becomes unstable when multiple visualization plugins are loaded
+
+**Explanation:** MCV hooks into the Unreal Engine wire rendering system at the Material Editor graph panel level. On UE 5.6+, this uses a per-panel factory (`FGraphNodeFactory`) that can only hold one active factory at a time — whichever plugin injects last wins, replacing the previous one. On all UE versions, the shared `VisualPinConnectionFactories` static array is the injection point, and only the first matching factory is used.
+
+Plugins that conflict with MCV include any plugin that:
+- Colors or replaces wire rendering in the Material Editor graph
+- Injects a custom drawing policy for Material Graph connections
+- Modifies how the Material Graph visualizes node connections
+- Adds its own heatmap, complexity overlay, or wire annotation to the graph
+
+**First step when debugging visual issues:**
+
+1. **Disable ALL other plugins that affect the Material Editor visual**
+2. Restart the editor completely
+3. Verify MCV works correctly with only MCV active
+4. Re-enable other plugins one by one to identify the conflicting plugin
+
+If a conflict is confirmed, MCV and the other plugin cannot be active simultaneously. Use whichever plugin is needed for the current task and disable the other.
+
+---
+
 ## Debug Tools
 
 ### UE Console Commands
@@ -393,3 +456,16 @@ Use the **Widget Reflector** (Window → Developer Tools → Widget Reflector) t
 - `SMaterialComplexityHoverToolTip`
 - `SMaterialComplexityHotspotsWidget`
 
+---
+
+## Still Having Issues?
+
+If your problem isn't listed here:
+
+1. Check the [GitHub Issues](../../issues) for known bugs and workarounds
+2. Open a new issue with:
+   - Unreal Engine version
+   - Plugin version
+   - Steps to reproduce the problem
+   - Material Editor screenshot (if applicable)
+   - Relevant log output from `Saved/Logs/`
